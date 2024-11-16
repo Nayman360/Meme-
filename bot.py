@@ -1,5 +1,7 @@
 import requests
 
+# Solscan API Key
+SOLSCAN_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjcmVhdGVkQXQiOjE3MzE3NzExNDg3NDgsImVtYWlsIjoia2hzZXJ2aWNlczQxQGdtYWlsLmNvbSIsImFjdGlvbiI6InRva2VuLWFwaSIsImFwaVZlcnNpb24iOiJ2MiIsImlhdCI6MTczMTc3MTE0OH0.N7AVi4SNk_xlkOAsatclAk-ItUnMiWKIZI3c7fLkt4g"
 
 def fetch_token_data(contract_address, chain):
     """
@@ -10,15 +12,17 @@ def fetch_token_data(contract_address, chain):
         if chain == "solana":
             # Use Solscan API for Solana tokens
             solscan_url = f"https://api.solscan.io/token/meta?tokenAddress={contract_address}"
-            response = requests.get(solscan_url)
+            headers = {"accept": "application/json", "token": SOLSCAN_API_KEY}  # Add API key
+            response = requests.get(solscan_url, headers=headers)
             
-            # Handle response errors
-            if response.status_code != 200:
+            if response.status_code == 403:
+                print("Error: Access forbidden. Check your Solscan API key.")
+                return None
+            elif response.status_code != 200:
                 print(f"Error: Solscan API returned status code {response.status_code}.")
                 return None
-            
+
             solscan_data = response.json()
-            
             if "status" in solscan_data and solscan_data["status"] != 1:
                 print("Token not found on Solscan. Verify the address and try again.")
                 return None
@@ -40,12 +44,11 @@ def fetch_token_data(contract_address, chain):
             # Use Dexscreener for Ethereum tokens
             dexscreener_url = f"https://api.dexscreener.io/latest/dex/tokens/{contract_address}"
             response = requests.get(dexscreener_url)
-            
-            # Handle response errors
+
             if response.status_code != 200:
                 print(f"Error: Dexscreener API returned status code {response.status_code}.")
                 return None
-            
+
             dexscreener_data = response.json()
 
             if "pair" not in dexscreener_data:
@@ -83,48 +86,6 @@ def fetch_token_data(contract_address, chain):
         return None
 
 
-def analyze_wallet(address):
-    """
-    Analyzes a wallet address to check if it's suitable for copy trading (Solana-specific).
-    """
-    try:
-        print("\n--- Analyzing Wallet ---")
-        solscan_url = f"https://api.solscan.io/account?address={address}"
-        response = requests.get(solscan_url)
-
-        # Handle response errors
-        if response.status_code != 200:
-            print(f"Error: Solscan API returned status code {response.status_code}.")
-            return None
-        
-        wallet_data = response.json()
-
-        if "status" in wallet_data and wallet_data["status"] != 1:
-            print("Wallet not found on Solscan. Verify the address and try again.")
-            return None
-
-        tx_count = wallet_data.get("tx_count", 0)
-        balance = wallet_data.get("balance", {}).get("total", 0)
-        print(f"Wallet Address: {address}")
-        print(f"Transaction Count: {tx_count}")
-        print(f"Total Balance: {balance} SOL")
-
-        # Evaluate based on activity
-        if tx_count > 100:
-            print("This wallet has high activity and may belong to an experienced trader.")
-        else:
-            print("This wallet has low activity. Be cautious when copying trades.")
-
-        return wallet_data
-
-    except requests.exceptions.RequestException as e:
-        print(f"Network error while analyzing wallet: {e}")
-        return None
-    except Exception as e:
-        print(f"Error analyzing wallet: {e}")
-        return None
-
-
 if __name__ == "__main__":
     print("Select an option:")
     print("1. Scan a token contract")
@@ -148,7 +109,7 @@ if __name__ == "__main__":
 
     elif choice == "2":
         wallet_address = input("Enter the wallet address: ").strip()
-        analyze_wallet(wallet_address)
-
+        # Call wallet analysis function (if implemented)
+        print("Wallet analysis is currently in development.")
     else:
         print("Invalid choice. Exiting.")
